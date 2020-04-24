@@ -121,7 +121,7 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 		}
 
 		resType := strings.Trim(textParts[2], ") ")
-		if resType != "TV Series" {
+		if resType != "TV Series" && resType != "TV Mini-Series" {
 			return //not a tv show
 		}
 

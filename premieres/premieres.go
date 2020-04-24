@@ -80,6 +80,10 @@ func (pc PremieresClient) GetPotentiallyInterestingPremieres(lastProcessedDate s
 		if link, ok := title.Attr("href"); !ok || strings.Contains(link, "movie") {
 			return //we're not interested in movies
 		}
+		movieFlag := s.Find("td.title img[alt=MOVIE]")
+		if movieFlag != nil && movieFlag.Nodes != nil {
+			return //this is a movie
+		}
 		premiere.Title = strings.TrimSpace(title.Text())
 		if premiere.Title == "" || premiere.Title == "Trailer" {
 			return //if there was no link then it's probably not an interesting show
