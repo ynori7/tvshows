@@ -92,7 +92,7 @@ func (h PremieresHandler) GenerateNewReleasesReport() (*PremieresReport, error) 
 }
 
 func (h PremieresHandler) getLastProcessedDate() string {
-	dat, err := ioutil.ReadFile(lastProcessedFile)
+	dat, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", config.CliConf.LastProcessedPath, lastProcessedFile))
 	if err != nil || len(strings.TrimSpace(string(dat))) == 0 {
 		lastWeek := time.Now().Add(-1 * defaultDays * 24 * time.Hour)
 		return fmt.Sprintf("%s %d", lastWeek.Month(), lastWeek.Day())
