@@ -6,13 +6,16 @@ type TvShow struct {
 	Title           string `json:"name"`
 	Type            string `json:"@type"`
 	Link            string
-	Image           string   `json:"image"`
-	Genres          []string `json:"genre"`
-	Rating          Rating   `json:"aggregateRating"`
-	Description     string   `json:"description"`
-	Created         string   `json:"datePublished"`
-	AgeRating       string   `json:"contentRating"`
+	Image           string `json:"image"`
+	Genres          []string
+	GenresRaw       interface{} `json:"genre"` //sometimes it's a string and sometimes it's a list of strings
+	Rating          Rating      `json:"aggregateRating"`
+	Description     string      `json:"description"`
+	Created         string      `json:"datePublished"`
+	AgeRating       string      `json:"contentRating"`
+	Score           int
 	StreamingOption streamer.Streamer
+	IsNewSeries     bool
 }
 
 type Rating struct {

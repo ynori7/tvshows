@@ -2,11 +2,16 @@ package handler
 
 import (
 	"fmt"
-	"github.com/ynori7/tvshows/config"
-	"github.com/ynori7/tvshows/premieres"
 	"io/ioutil"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/ynori7/tvshows/config"
+	"github.com/ynori7/tvshows/filter"
+	"github.com/ynori7/tvshows/premieres"
+	"github.com/ynori7/tvshows/tvshow"
+	"github.com/ynori7/tvshows/view"
 )
 
 const lastProcessedFile = "lastprocessed.dat"
@@ -27,18 +32,63 @@ func NewPremieresHandler(
 	}
 }
 
-//todo return type
-func (h PremieresHandler) GetNewPremieres() (*premieres.PremiereList, error) {
+func (h PremieresHandler) GenerateNewReleasesReport() (*PremieresReport, error) {
+	logger := log.WithFields(log.Fields{"Logger": "GenerateNewReleasesReport"})
+
 	lastProcessedDate := h.getLastProcessedDate()
 
-	list, err := h.premieresClient.GetPotentiallyInterestingPremieres(lastProcessedDate)
+	//Get the premieresList of new premieres
+	premieresList, err := h.premieresClient.GetPotentiallyInterestingPremieres(lastProcessedDate)
 	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Error getting new premieres")
 		return nil, err
 	}
 
-	h.updateLastProcessedDate(list.EndDate)
+	//Fetch the tv show details and filter
+	filterer := filter.NewFilterer(h.conf, tvshow.NewTvShowClient(h.conf), premieresList)
+	interestingSeries := filterer.FilterAndEnrich()
 
-	return list, nil
+	if len(interestingSeries) == 0 {
+		return nil, fmt.Errorf("no new series")
+	}
+
+	//Split the new and returning series
+	newSeries := make([]tvshow.TvShow, 0)
+	returningSeries := make([]tvshow.TvShow, 0)
+	for _, series := range interestingSeries {
+		if series.IsNewSeries {
+			newSeries = append(newSeries, series)
+		} else {
+			returningSeries = append(returningSeries, series)
+		}
+	}
+
+	//Build HTML output
+	template := view.NewHtmlTemplate(newSeries, returningSeries)
+	out, err := template.ExecuteHtmlTemplate()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Error generating html")
+		return nil, err
+	}
+
+	//Save HTML output to file
+	dateString := time.Now().Format("20060102") //yyyyMMdd
+	err = ioutil.WriteFile(fmt.Sprintf("%s/%s-%s.html", config.CliConf.OutputPath, h.conf.Title, dateString), []byte(out), 0644)
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Warn("Error saving html to file")
+		return nil, err
+	}
+
+	//Mark where we left off
+	if err := h.updateLastProcessedDate(premieresList.EndDate); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Warn("Error updating last processed date")
+	}
+
+	return &PremieresReport{
+		Html:      out,
+		StartDate: premieresList.StartDate,
+		EndDate:   premieresList.EndDate,
+	}, nil
 }
 
 func (h PremieresHandler) getLastProcessedDate() string {
@@ -52,5 +102,5 @@ func (h PremieresHandler) getLastProcessedDate() string {
 }
 
 func (h PremieresHandler) updateLastProcessedDate(date string) error {
-	return ioutil.WriteFile(lastProcessedFile, []byte(date), 0644)
+	return ioutil.WriteFile(fmt.Sprintf("%s/%s", config.CliConf.LastProcessedPath, lastProcessedFile), []byte(date), 0644)
 }

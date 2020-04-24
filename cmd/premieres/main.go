@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"github.com/ynori7/tvshows/handler"
-	"github.com/ynori7/tvshows/tvshow"
 	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/ynori7/tvshows/config"
+	"github.com/ynori7/tvshows/email"
+	"github.com/ynori7/tvshows/handler"
 	"github.com/ynori7/tvshows/premieres"
 )
 
@@ -36,17 +35,16 @@ func main() {
 	}
 
 	premieresHandler := handler.NewPremieresHandler(conf, premieres.NewPremieresClient(conf))
-	newPremieres, err := premieresHandler.GetNewPremieres()
+	newPremieresReport, err := premieresHandler.GenerateNewReleasesReport()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Error getting interesting new premieres")
 		return
 	}
 
-	fmt.Println(newPremieres.StartDate, " - ", newPremieres.EndDate)
-
-	tvShowClient := tvshow.NewTvShowClient(conf)
-	for _, premiere := range newPremieres.Premieres {
-		fmt.Println(premiere)
-		fmt.Println(tvShowClient.SearchForTvSeriesTitle(premiere.Title))
+	if conf.Email.Enabled {
+		mailer := email.NewMailer(conf)
+		if err := mailer.SendMail(email.GetNewReleasesSubjectLine(newPremieresReport.StartDate, newPremieresReport.EndDate), newPremieresReport.Html); err != nil {
+			logger.WithFields(log.Fields{"error": err}).Error("Error sending email")
+		}
 	}
 }

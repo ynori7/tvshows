@@ -1,21 +1,13 @@
 package config
 
 import (
-	"strings"
-
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
 	Title      string
-	MainGenres []string  `yaml:"main_genres,flow"`
-	SubGenres  SubGenres `yaml:"sub_genres"`
+	MainGenres []string `yaml:"main_genres,flow"`
 	Email      Email
-}
-
-type SubGenres struct {
-	FuzzyMatches []string `yaml:"fuzzy_matches,flow"`
-	ExactMatches []string `yaml:"exact_matches,flow"`
 }
 
 type Email struct {
@@ -41,19 +33,6 @@ func (c *Config) Parse(data []byte) error {
 func (c *Config) IsInterestingMainGenre(genres []string) bool {
 	for _, g := range genres {
 		if isContainedInList(g, c.MainGenres) {
-			return true
-		}
-	}
-	return false
-}
-
-func (c *Config) IsInterestingSubGenre(genre string) bool {
-	return stringContainsListItem(genre, c.SubGenres.FuzzyMatches) || isContainedInList(genre, c.SubGenres.ExactMatches)
-}
-
-func stringContainsListItem(str string, list []string) bool {
-	for _, s := range list {
-		if strings.Contains(str, s) {
 			return true
 		}
 	}

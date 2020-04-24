@@ -3,13 +3,14 @@ package tvshow
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/ynori7/tvshows/config"
 	"math"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/ynori7/tvshows/config"
 )
 
 const (
@@ -19,8 +20,8 @@ const (
 
 type ImdbClient struct {
 	httpClient *http.Client
-	conf config.Config
-	baseUrl string
+	conf       config.Config
+	baseUrl    string
 }
 
 func NewTvShowClient(conf config.Config) ImdbClient {
@@ -60,7 +61,17 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	if err := json.Unmarshal([]byte(x), tvShow); err != nil {
 		return nil, err
 	}
+	genres, ok := tvShow.GenresRaw.([]interface{})
+	if ok {
+		for _, g := range genres {
+			tvShow.Genres = append(tvShow.Genres, g.(string))
+		}
+	} else {
+		tvShow.Genres = []string{tvShow.GenresRaw.(string)}
+	}
+
 	tvShow.Link = link
+	tvShow.Score = c.calculateScore(tvShow.Rating.AverageRating, tvShow.Rating.RatingCount)
 
 	return tvShow, nil
 }
@@ -121,7 +132,7 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 		}
 	})
 
-	return foundLink,  nil
+	return foundLink, nil
 }
 
 func (c ImdbClient) buildImdbSearchUrl(title string) string {
@@ -132,7 +143,7 @@ func (c ImdbClient) buildImdbSearchUrl(title string) string {
 
 //list of rating counts. The index is the log() value
 var scoreIntervals = []int{
-	0, 0, 1000, 2000, 3000, 5000, 8000, 10000, 20000, 50000, 100000, 500000, 1000000,
+	0, 0, 500, 1000, 1500, 2000, 3000, 4000, 8000, 10000, 20000, 50000, 100000, 500000,
 }
 
 //returns a score out of 100
@@ -142,7 +153,7 @@ func (c ImdbClient) calculateScore(averageRating string, ratingCount int) int {
 		return 0
 	}
 
-	scoreBase := rating * float64(100)
+	scoreBase := rating * float64(10)
 	score := 0
 
 	for i := len(scoreIntervals) - 1; i > 0; i-- {

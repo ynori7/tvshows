@@ -5,19 +5,19 @@ import "flag"
 var CliConf CliConfig
 
 type CliConfig struct {
-	ConfigFile     string
-	NewReleaseWeek string //optional
-	OutputPath     string //optional
+	ConfigFile        string
+	OutputPath        string //optional
+	LastProcessedPath string //optional
 }
 
 func ParseCliFlags() {
 	configFile := flag.String("config", "", "the path to the configuration yaml")
-	newReleaseWeek := flag.String("new-release-week", "", "the new release week (always a Thursday) in the format YYYYMMDD")
+	lastProcessedPath := flag.String("last-processed-path", ".", "the path where the last processed date file should be saved")
 	output := flag.String("output", "out", "the path where output files should be saved")
 
 	flag.Parse()
 
 	CliConf.ConfigFile = *configFile
-	CliConf.NewReleaseWeek = *newReleaseWeek
+	CliConf.LastProcessedPath = *lastProcessedPath
 	CliConf.OutputPath = *output
 }
