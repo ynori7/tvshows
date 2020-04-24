@@ -1,4 +1,4 @@
-package handler
+package application
 
 import (
 	"fmt"
@@ -8,32 +8,35 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/ynori7/tvshows/config"
-	"github.com/ynori7/tvshows/filter"
+	"github.com/ynori7/tvshows/enrich"
 	"github.com/ynori7/tvshows/premieres"
 	"github.com/ynori7/tvshows/tvshow"
 	"github.com/ynori7/tvshows/view"
 )
 
-const lastProcessedFile = "lastprocessed.dat"
-const defaultDays = time.Duration(7)
+const (
+	lastProcessedFile = "lastprocessed.dat"
+	defaultDays       = time.Duration(7)
+	yyyyMMdd          = "20060102"
+)
 
-type PremieresHandler struct {
+type PremieresReporter struct {
 	conf            config.Config
 	premieresClient premieres.PremieresClient
 }
 
-func NewPremieresHandler(
+func NewPremieresReporter(
 	conf config.Config,
 	premieresClient premieres.PremieresClient,
-) PremieresHandler {
-	return PremieresHandler{
+) PremieresReporter {
+	return PremieresReporter{
 		conf:            conf,
 		premieresClient: premieresClient,
 	}
 }
 
-func (h PremieresHandler) GenerateNewReleasesReport() (*PremieresReport, error) {
-	logger := log.WithFields(log.Fields{"Logger": "GenerateNewReleasesReport"})
+func (h PremieresReporter) GeneratePremieresReport() (*PremieresReport, error) {
+	logger := log.WithFields(log.Fields{"Logger": "GeneratePremieresReport"})
 
 	lastProcessedDate := h.getLastProcessedDate()
 
@@ -45,7 +48,7 @@ func (h PremieresHandler) GenerateNewReleasesReport() (*PremieresReport, error) 
 	}
 
 	//Fetch the tv show details and filter
-	filterer := filter.NewFilterer(h.conf, tvshow.NewTvShowClient(h.conf), premieresList)
+	filterer := enrich.NewEnricher(h.conf, tvshow.NewTvShowClient(h.conf), premieresList)
 	interestingSeries := filterer.FilterAndEnrich()
 
 	if len(interestingSeries) == 0 {
@@ -72,7 +75,7 @@ func (h PremieresHandler) GenerateNewReleasesReport() (*PremieresReport, error) 
 	}
 
 	//Save HTML output to file
-	dateString := time.Now().Format("20060102") //yyyyMMdd
+	dateString := time.Now().Format(yyyyMMdd)
 	err = ioutil.WriteFile(fmt.Sprintf("%s/%s-%s.html", config.CliConf.OutputPath, h.conf.Title, dateString), []byte(out), 0644)
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Warn("Error saving html to file")
@@ -91,7 +94,7 @@ func (h PremieresHandler) GenerateNewReleasesReport() (*PremieresReport, error) 
 	}, nil
 }
 
-func (h PremieresHandler) getLastProcessedDate() string {
+func (h PremieresReporter) getLastProcessedDate() string {
 	dat, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", config.CliConf.LastProcessedPath, lastProcessedFile))
 	if err != nil || len(strings.TrimSpace(string(dat))) == 0 {
 		lastWeek := time.Now().Add(-1 * defaultDays * 24 * time.Hour)
@@ -101,6 +104,6 @@ func (h PremieresHandler) getLastProcessedDate() string {
 	return strings.TrimSpace(string(dat))
 }
 
-func (h PremieresHandler) updateLastProcessedDate(date string) error {
+func (h PremieresReporter) updateLastProcessedDate(date string) error {
 	return ioutil.WriteFile(fmt.Sprintf("%s/%s", config.CliConf.LastProcessedPath, lastProcessedFile), []byte(date), 0644)
 }

@@ -1,4 +1,4 @@
-package handler
+package application
 
 type PremieresReport struct {
 	Html      string

@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/ynori7/tvshows/application"
 	"github.com/ynori7/tvshows/config"
 	"github.com/ynori7/tvshows/email"
-	"github.com/ynori7/tvshows/handler"
 	"github.com/ynori7/tvshows/premieres"
 )
 
@@ -34,8 +34,8 @@ func main() {
 		logger.WithFields(log.Fields{"error": err}).Fatal("Error parsing config")
 	}
 
-	premieresHandler := handler.NewPremieresHandler(conf, premieres.NewPremieresClient(conf))
-	newPremieresReport, err := premieresHandler.GenerateNewReleasesReport()
+	premieresReporter := application.NewPremieresReporter(conf, premieres.NewPremieresClient(conf))
+	newPremieresReport, err := premieresReporter.GeneratePremieresReport()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Error getting interesting new premieres")
 		return

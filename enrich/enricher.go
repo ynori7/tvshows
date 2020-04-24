@@ -1,4 +1,4 @@
-package filter
+package enrich
 
 import (
 	"fmt"
@@ -11,21 +11,21 @@ import (
 	"github.com/ynori7/workerpool"
 )
 
-type Filterer struct {
+type Enricher struct {
 	conf               config.Config
 	potentialPremieres *premieres.PremiereList
 	tvshowClient       tvshow.ImdbClient
 }
 
-func NewFilterer(conf config.Config, discographyClient tvshow.ImdbClient, premieres *premieres.PremiereList) Filterer {
-	return Filterer{
+func NewEnricher(conf config.Config, discographyClient tvshow.ImdbClient, premieres *premieres.PremiereList) Enricher {
+	return Enricher{
 		conf:               conf,
 		potentialPremieres: premieres,
 		tvshowClient:       discographyClient,
 	}
 }
 
-func (f Filterer) FilterAndEnrich() []tvshow.TvShow {
+func (f Enricher) FilterAndEnrich() []tvshow.TvShow {
 	logger := log.WithFields(log.Fields{"Logger": "FilterAndEnrich"})
 
 	//Process results
@@ -57,7 +57,7 @@ func (f Filterer) FilterAndEnrich() []tvshow.TvShow {
 	return series
 }
 
-func (f Filterer) processPremiere(job interface{}) (result interface{}, err error) {
+func (f Enricher) processPremiere(job interface{}) (result interface{}, err error) {
 	j := job.(premieres.Premiere)
 
 	imdbLink, err := f.tvshowClient.SearchForTvSeriesTitle(j.Title)
