@@ -10,11 +10,6 @@ main_genres: #these genres are filtered first from the new releases list
   - "Action"
   - "Sci-fi"
   - "Anime"
-sub_genres: #these genres are filtered on the detail pages
-  fuzzy_matches:
-    - "TODO"
-  exact_matches:
-    - "TODO"
 email: #configuration about the emailer
   enabled: false #when false, don't send an email
   private_key: ""

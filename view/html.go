@@ -73,16 +73,16 @@ const htmlTemplate = `<html>
             background-position: -15px -118px;
             float: left;
             font-size: 11px;
-            height: 40px;
+            height: 30px;
             line-height: 13px;
-            padding: 2px 0 0 34px;
-            width: 58px;
+            padding: 5px 0 0 34px;
+            width: 100%;
         }
         .ratings_wrapper .imdbRating .ratingValue strong {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: normal;
             font-family: Arial;
-            line-height: 24px;
+            line-height: 18px;
         }
         .grey {
             color: #6b6b6b;
@@ -93,7 +93,7 @@ const htmlTemplate = `<html>
         }
         .left-part {
             float:left;
-            width: 49%;
+            width: 44%;
             margin-right: 1%;
         }
         .left-part img {
@@ -101,7 +101,7 @@ const htmlTemplate = `<html>
         }
         .right-part {
             float:right;
-            width: 49%;
+            width: 54%;
             margin-left: 1%;
         }
         .genres {
@@ -130,6 +130,9 @@ const htmlTemplate = `<html>
 		tr {
 			margin-bottom: 15px;
 		}
+		.ratings_wrapper, .score, .genres {
+			width: 100%;
+		}
 	</style>
 </head>
 <body>
@@ -143,8 +146,8 @@ const htmlTemplate = `<html>
             <table width="600" cellpadding="0" cellspacing="0" border="0" class="premieresList">
                 <tbody>
 				{{range $i, $val := .ReturningTvShows}}
-					{{ if eq $i 0 }}<tr>{{ else if mod $i 3 }}</tr><tr>{{ else }}<td width="2%" align="center" valign="top">&nbsp;</td>{{ end }}
-					<td width="32%" align="left" valign="top">
+					{{ if eq $i 0 }}<tr>{{ else if mod $i 2 }}</tr><tr>{{ else }}<td width="2%" align="center" valign="top">&nbsp;</td>{{ end }}
+					<td width="49%" align="left" valign="top">
     			        <div class="title"><a href="{{ $val.Link }}">{{ $val.Title }}</a></div>
 						<div class="left-part">
 							<img alt="{{ $val.Title }} Poster" title="{{ $val.Title }} Poster" src="{{ $val.Image }}">
@@ -190,9 +193,9 @@ const htmlTemplate = `<html>
             <table width="600" cellpadding="0" cellspacing="0" border="0" class="premieresList">
                 <tbody>
 				{{range $i, $val := .NewTvShows}}
-					{{ if eq $i 0 }}<tr>{{ else if mod $i 3 }}</tr><tr>{{ else }}<td width="2%" align="center" valign="top">&nbsp;</td>{{ end }}
+					{{ if eq $i 0 }}<tr>{{ else if mod $i 2 }}</tr><tr>{{ else }}<td width="2%" align="center" valign="top">&nbsp;</td>{{ end }}
 					<td width="32%" align="left" valign="top">
-    			        <div class="title"><a href="">{{ $val.Title }}</a></div>
+    			        <div class="title"><a href="{{ $val.Link }}">{{ $val.Title }}</a></div>
 						<div class="left-part">
 							<img alt="{{ $val.Title }} Poster" title="{{ $val.Title }} Poster" src="{{ $val.Image }}">
             			</div>
