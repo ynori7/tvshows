@@ -45,5 +45,5 @@ to save the last processed date.
 Commands are located in `cmd` and are the main entry points.
 
 The `premieres` command gathers configuration from the `config` package, then sets up
-a `premieres/handler` which orchestrates fetching data from `tvshow` and then filtering 
+a `handler` which orchestrates fetching data from `tvshow` and then filtering 
 using the `filter` worker pool.
