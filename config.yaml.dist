@@ -1,0 +1,27 @@
+title: "my-conf" #just a title for the configuration which is appended to the out file name
+main_genres: #these genres are filtered first from the new releases list
+  - "Drama"
+  - "Comedy"
+  - "Thriller"
+  - "Animation"
+  - "Family"
+  - "Horror"
+  - "Fantasy"
+  - "Action"
+  - "Sci-fi"
+  - "Anime"
+sub_genres: #these genres are filtered on the detail pages
+  fuzzy_matches:
+    - "TODO"
+  exact_matches:
+    - "TODO"
+email: #configuration about the emailer
+  enabled: false #when false, don't send an email
+  private_key: ""
+  public_key: ""
+  from:
+    address: ""
+    name: ""
+  to:
+    address: ""
+    name: ""
