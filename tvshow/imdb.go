@@ -3,14 +3,19 @@ package tvshow
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/ynori7/tvshows/config"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 const (
@@ -22,13 +27,20 @@ type ImdbClient struct {
 	httpClient *http.Client
 	conf       config.Config
 	baseUrl    string
+	titleRegex *regexp.Regexp
 }
 
 func NewTvShowClient(conf config.Config) ImdbClient {
+	reg, err := regexp.Compile("[^a-zA-Z0-9\\s]+")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return ImdbClient{
 		httpClient: &http.Client{},
 		conf:       conf,
 		baseUrl:    baseUrl,
+		titleRegex: reg,
 	}
 }
 
@@ -61,13 +73,15 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	if err := json.Unmarshal([]byte(x), tvShow); err != nil {
 		return nil, err
 	}
-	genres, ok := tvShow.GenresRaw.([]interface{})
-	if ok {
-		for _, g := range genres {
-			tvShow.Genres = append(tvShow.Genres, g.(string))
+	if tvShow.GenresRaw != nil {
+		genres, ok := tvShow.GenresRaw.([]interface{})
+		if ok {
+			for _, g := range genres {
+				tvShow.Genres = append(tvShow.Genres, g.(string))
+			}
+		} else {
+			tvShow.Genres = []string{tvShow.GenresRaw.(string)}
 		}
-	} else {
-		tvShow.Genres = []string{tvShow.GenresRaw.(string)}
 	}
 
 	tvShow.Link = link
@@ -101,7 +115,7 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 
 	foundLink := ""
 	found := false
-	searchTitle = strings.ToLower(searchTitle)
+	searchTitle = c.fuzzifyTitle(searchTitle)
 
 	// Find the new releases
 	doc.Find("table.findList tr").Each(func(i int, s *goquery.Selection) {
@@ -113,7 +127,7 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 		resText := res.Text()
 		textParts := strings.Split(resText, "(")
 		title := strings.TrimSpace(textParts[0])
-		if strings.ToLower(title) != searchTitle {
+		if c.fuzzifyTitle(title) != searchTitle {
 			return //not an exact match
 		}
 		if len(textParts) != 3 {
@@ -121,7 +135,7 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 		}
 
 		resType := strings.Trim(textParts[2], ") ")
-		if resType != "TV Series" && resType != "TV Mini-Series" {
+		if !strings.HasPrefix(resType, "TV Series") && !strings.HasPrefix(resType, "TV Mini-Series") {
 			return //not a tv show
 		}
 
@@ -132,7 +146,23 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 		}
 	})
 
+	if foundLink == "" {
+		return "", fmt.Errorf("no result found")
+	}
+
 	return foundLink, nil
+}
+
+func (c ImdbClient) fuzzifyTitle(t string) string {
+	//replace accented characters
+	tr := transform.Chain(norm.NFD, transform.RemoveFunc(func(r rune) bool {
+		return unicode.Is(unicode.Mn, r) // Mn: nonspacing marks
+	}), norm.NFC)
+	result, _, _ := transform.String(tr, t)
+
+	result = c.titleRegex.ReplaceAllString(result, "") //remove punctuation
+
+	return strings.ToLower(result)
 }
 
 func (c ImdbClient) buildImdbSearchUrl(title string) string {

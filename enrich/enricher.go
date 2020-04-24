@@ -1,6 +1,7 @@
 package enrich
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -16,6 +17,8 @@ type Enricher struct {
 	potentialPremieres *premieres.PremiereList
 	tvshowClient       tvshow.ImdbClient
 }
+
+var ErrScoreTooLow = fmt.Errorf("score is too low")
 
 func NewEnricher(conf config.Config, discographyClient tvshow.ImdbClient, premieres *premieres.PremiereList) Enricher {
 	return Enricher{
@@ -35,11 +38,17 @@ func (f Enricher) FilterAndEnrich() []tvshow.TvShow {
 	workerPool := workerpool.NewWorkerPool(5,
 		func(result interface{}) {
 			r := result.(*tvshow.TvShow)
-			logger.WithFields(log.Fields{"Artist": r.Title}).Debug("Found interesting series")
+			logger.WithFields(log.Fields{"Title": r.Title}).Debug("Found interesting series")
 			series = append(series, *r)
 		},
 		func(err error) {
-			logger.WithFields(log.Fields{"error": err}).Error("Error looking up series data")
+			unwrappedErr := errors.Unwrap(err)
+			switch unwrappedErr {
+			case ErrScoreTooLow:
+				logger.WithFields(log.Fields{"error": err}).Info("Series was filtered out")
+			default:
+				logger.WithFields(log.Fields{"error": err}).Error("Error looking up series data")
+			}
 		},
 		f.processPremiere,
 	)
@@ -69,6 +78,11 @@ func (f Enricher) processPremiere(job interface{}) (result interface{}, err erro
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", err, j.Title)
 	}
+
+	if (j.IsNew && series.Score < 20) || (!j.IsNew && series.Score < 40) {
+		return nil, fmt.Errorf("%w: %s", ErrScoreTooLow, j.Title)
+	}
+
 	series.IsNewSeries = j.IsNew
 	series.StreamingOption = j.StreamingOption
 

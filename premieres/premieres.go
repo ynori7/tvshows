@@ -75,18 +75,21 @@ func (pc PremieresClient) GetPotentiallyInterestingPremieres(lastProcessedDate s
 
 		premiere := new(Premiere)
 
-		//Get title
-		title := s.Find("td.title a").First()
-		if link, ok := title.Attr("href"); !ok || strings.Contains(link, "movie") {
+		//Check if it's a movie
+		titleLink := s.Find("td.title a").First()
+		if link, ok := titleLink.Attr("href"); !ok || strings.Contains(link, "movie") {
 			return //we're not interested in movies
 		}
 		movieFlag := s.Find("td.title img[alt=MOVIE]")
 		if movieFlag != nil && movieFlag.Nodes != nil {
 			return //this is a movie
 		}
-		premiere.Title = strings.TrimSpace(title.Text())
-		if premiere.Title == "" || premiere.Title == "Trailer" {
-			return //if there was no link then it's probably not an interesting show
+
+		//Get the title text
+		titleRaw := s.Find("td.title").Text()
+		premiere.Title = pc.cleanTitle(titleRaw)
+		if premiere.Title == ""  {
+			return //if there was no title then this is a garbage entry
 		}
 		if _, ok := premiereSet[premiere.Title]; ok {
 			return //this is apparently a duplicate
@@ -123,6 +126,15 @@ func (pc PremieresClient) GetPotentiallyInterestingPremieres(lastProcessedDate s
 	}
 
 	return premieres, nil
+}
+
+func (pc PremieresClient) cleanTitle(t string) string {
+	t = strings.ReplaceAll(t, "Trailer2", "")
+	t = strings.ReplaceAll(t, "Trailer", "")
+	t = strings.ReplaceAll(t, "Opening scene", "")
+	t = strings.ReplaceAll(t, "Full 1st episode", "")
+	t = strings.ReplaceAll(t, "Red-band trailer", "")
+	return strings.TrimSpace(t)
 }
 
 func (pc PremieresClient) getStreamer(s *goquery.Selection) streamer.Streamer {
