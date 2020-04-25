@@ -114,44 +114,83 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 		return "", err
 	}
 
-	foundLink := ""
-	found := false
-	searchTitle = c.fuzzifyTitle(searchTitle)
+	potentialResults := make([]SearchResult, 0)
 
 	// Find the new releases
 	doc.Find("table.findList tr").Each(func(i int, s *goquery.Selection) {
-		if found {
-			return
-		}
-
 		res := s.Find(".result_text")
 		resText := res.Text()
 		textParts := strings.Split(resText, "(")
-		title := strings.TrimSpace(textParts[0])
-		if c.fuzzifyTitle(title) != searchTitle {
-			return //not an exact match
-		}
-		if len(textParts) != 3 {
-			return //it's not a tv show
-		}
 
-		resType := strings.Trim(textParts[2], ") ")
-		if !strings.HasPrefix(resType, "TV Series") && !strings.HasPrefix(resType, "TV Mini-Series") {
-			return //not a tv show
+		searchResult := c.parseSearchResultTitle(textParts, searchTitle)
+		if searchResult == nil {
+			return
 		}
 
 		linkRaw := res.Find("a")
 		if link, ok := linkRaw.Attr("href"); ok {
-			found = true
-			foundLink = baseUrl + link
+			searchResult.Link = baseUrl + link
+			potentialResults = append(potentialResults, *searchResult)
 		}
 	})
 
-	if foundLink == "" {
+	if len(potentialResults) == 0 {
 		return "", fmt.Errorf("no result found")
 	}
 
-	return foundLink, nil
+	//find the one with the most recent year
+	bestResult := 0
+	latestYear := ""
+	for i, res := range potentialResults {
+		if res.Year > latestYear {
+			latestYear = res.Year
+			bestResult = i
+		}
+	}
+
+	return potentialResults[bestResult].Link, nil
+}
+
+func (c ImdbClient) parseSearchResultTitle(textParts []string, searchTitle string) *SearchResult {
+	if len(textParts) == 0 {
+		return nil
+	}
+
+	title := strings.TrimSpace(textParts[0])
+	if c.fuzzifyTitle(title) != c.fuzzifyTitle(searchTitle) {
+		return nil
+	}
+
+	var (
+		rawType  string
+		rawYear  string
+		rawDedup string
+	)
+
+	//format is "title (year) (type)"
+	if len(textParts) == 3 {
+		rawType = textParts[2]
+		rawYear = textParts[1]
+	}
+
+	//format is "title (dedup) (year) (type)"
+	if len(textParts) == 4 {
+		rawType = textParts[3]
+		rawYear = textParts[2]
+		rawDedup = textParts[1]
+	}
+
+	resType := strings.Trim(rawType, ") ")
+	if !strings.HasPrefix(resType, "TV Series") && !strings.HasPrefix(resType, "TV Mini-Series") {
+		return nil
+	}
+
+	return &SearchResult{
+		Title:       title,
+		Year:        strings.Trim(rawYear, ") "),
+		Type:        resType,
+		DedupNumber: strings.Trim(rawDedup, ") "),
+	}
 }
 
 //fuzzifyTitle normalizes the text by removing punctuation and accents to make the titles comparable

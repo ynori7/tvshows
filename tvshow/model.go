@@ -22,3 +22,11 @@ type Rating struct {
 	AverageRating string `json:"ratingValue"`
 	RatingCount   int    `json:"ratingCount"`
 }
+
+type SearchResult struct {
+	Title       string
+	Link        string
+	DedupNumber string //roman numeral to identify different shows with the same title
+	Year        string
+	Type        string //"Tv Series"
+}
