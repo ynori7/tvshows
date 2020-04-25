@@ -48,7 +48,7 @@ func (h PremieresReporter) GeneratePremieresReport() (*PremieresReport, error) {
 	}
 
 	//Fetch the tv show details and filter
-	filterer := enrich.NewEnricher(h.conf, tvshow.NewTvShowClient(h.conf), premieresList)
+	filterer := enrich.NewEnricher(h.conf, tvshow.NewImdbClient(h.conf), premieresList)
 	interestingSeries := filterer.FilterAndEnrich()
 
 	if len(interestingSeries) == 0 {

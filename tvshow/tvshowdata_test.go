@@ -91,7 +91,7 @@ func Test_calculateScore(t *testing.T) {
 		},
 	}
 
-	client := NewTvShowClient(config.Config{})
+	client := NewImdbClient(config.Config{})
 
 	for testcase, testdata := range testcases {
 		//when

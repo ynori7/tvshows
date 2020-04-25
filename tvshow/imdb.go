@@ -30,7 +30,7 @@ type ImdbClient struct {
 	titleRegex *regexp.Regexp
 }
 
-func NewTvShowClient(conf config.Config) ImdbClient {
+func NewImdbClient(conf config.Config) ImdbClient {
 	reg, err := regexp.Compile("[^a-zA-Z0-9\\s]+")
 	if err != nil {
 		log.Fatal(err)
@@ -44,6 +44,7 @@ func NewTvShowClient(conf config.Config) ImdbClient {
 	}
 }
 
+//GetTvShowData looks up the tv show details
 func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	// Request the HTML page.
 	req, err := http.NewRequest("GET", link, nil)
@@ -90,7 +91,7 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	return tvShow, nil
 }
 
-//Returns the IMDB url for the title
+//SearchForTvSeriesTitle returns the IMDB url for the title
 func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 	// Request the HTML page.
 	req, err := http.NewRequest("GET", c.buildImdbSearchUrl(searchTitle), nil)
@@ -153,6 +154,7 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 	return foundLink, nil
 }
 
+//fuzzifyTitle normalizes the text by removing punctuation and accents to make the titles comparable
 func (c ImdbClient) fuzzifyTitle(t string) string {
 	//replace accented characters
 	tr := transform.Chain(norm.NFD, transform.RemoveFunc(func(r rune) bool {
@@ -176,7 +178,7 @@ var scoreIntervals = []int{
 	0, 0, 500, 1000, 1500, 2000, 3000, 4000, 8000, 10000, 20000, 50000, 100000, 500000,
 }
 
-//returns a score out of 100
+//calculateScore returns a score out of 100 based on the imdb rating, weight by the number of ratings
 func (c ImdbClient) calculateScore(averageRating string, ratingCount int) int {
 	rating, err := strconv.ParseFloat(averageRating, 64)
 	if err != nil {

@@ -21,7 +21,7 @@ func Test_Search(t *testing.T) {
 	defer server.Close()
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
-	imdbClient := NewTvShowClient(conf)
+	imdbClient := NewImdbClient(conf)
 	imdbClient.httpClient = server.Client()
 	imdbClient.baseUrl = server.URL
 
@@ -43,7 +43,7 @@ func Test_Search_TitleNotExactMatch(t *testing.T) {
 	defer server.Close()
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
-	imdbClient := NewTvShowClient(conf)
+	imdbClient := NewImdbClient(conf)
 	imdbClient.httpClient = server.Client()
 	imdbClient.baseUrl = server.URL
 
@@ -65,7 +65,7 @@ func Test_Search_TitleHasAccent(t *testing.T) {
 	defer server.Close()
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
-	imdbClient := NewTvShowClient(conf)
+	imdbClient := NewImdbClient(conf)
 	imdbClient.httpClient = server.Client()
 	imdbClient.baseUrl = server.URL
 
@@ -84,7 +84,7 @@ func Test_fuzzifyTitle(t *testing.T) {
 		"Manhunt: Deadly Games": "manhunt deadly games",
 	}
 
-	imdbClient := NewTvShowClient(config.Config{})
+	imdbClient := NewImdbClient(config.Config{})
 
 	for testcase, expected := range testdata {
 		actual := imdbClient.fuzzifyTitle(testcase)

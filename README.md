@@ -7,8 +7,14 @@ about interesting new releases.
 
 ### Premieres
 The premieres command gathers information about new premieres from Metacritic based on
-the configured genres, and for each one it looks up additional data from IMDB. It 
-can then generate an HTML report which is sent by email.
+the configured genres, and for each one it looks up additional data from IMDB. It can then generate 
+ an HTML report which is sent by email. 
+
+**Additional details**
+- Shows with a score (a rating weighted by the rating count) which is too low (<40 for 
+   returning series, <20 for new series) will be filtered out.
+-  Emails are sent using Mailjet.
+ 
 
 **Usage:**
 
