@@ -77,7 +77,7 @@ func (pc PremieresClient) GetPotentiallyInterestingPremieres(lastProcessedDate s
 
 		//Check if it's a movie
 		titleLink := s.Find("td.title a").First()
-		if link, ok := titleLink.Attr("href"); !ok || strings.Contains(link, "movie") {
+		if link, ok := titleLink.Attr("href"); ok && strings.Contains(link, "movie") {
 			return //we're not interested in movies
 		}
 		movieFlag := s.Find("td.title img[alt=MOVIE]")

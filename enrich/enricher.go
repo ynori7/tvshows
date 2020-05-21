@@ -1,6 +1,7 @@
 package enrich
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -35,7 +36,7 @@ func (f Enricher) FilterAndEnrich() []tvshow.TvShow {
 	series := make([]tvshow.TvShow, 0)
 
 	//Set up worker pool
-	workerPool := workerpool.NewWorkerPool(5,
+	workerPool := workerpool.NewWorkerPool(
 		func(result interface{}) {
 			r := result.(*tvshow.TvShow)
 			logger.WithFields(log.Fields{"Title": r.Title}).Debug("Found interesting series")
@@ -54,7 +55,7 @@ func (f Enricher) FilterAndEnrich() []tvshow.TvShow {
 	)
 
 	//Do the work
-	if err := workerPool.Work(f.potentialPremieres.Premieres); err != nil {
+	if err := workerPool.Work(context.Background(), 5, f.potentialPremieres.Premieres); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Error processing jobs")
 	}
 

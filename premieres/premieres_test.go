@@ -28,11 +28,11 @@ func Test_GetPotentiallyInterestingPremieres(t *testing.T) {
 	} {
 		"a week ago": {
 			date:"April 14",
-			expectedLen: 9,
+			expectedLen: 12,
 		},
 		"last date is in future": {
 			date: "April 22",
-			expectedLen: 168, //it'll process them all
+			expectedLen: 301, //it'll process them all
 		},
 		"last date is same as most recent": {
 			date: "April 20",
@@ -40,7 +40,7 @@ func Test_GetPotentiallyInterestingPremieres(t *testing.T) {
 		},
 		"beginning of the month": {
 			date: "April 1",
-			expectedLen: 31,
+			expectedLen: 42,
 		},
 	}
 

@@ -133,6 +133,9 @@ const htmlTemplate = `<html>
 		.ratings_wrapper, .score, .genres {
 			width: 100%;
 		}
+		td {
+			display: inline-block;
+		}
 	</style>
 </head>
 <body>
@@ -194,7 +197,7 @@ const htmlTemplate = `<html>
                 <tbody>
 				{{range $i, $val := .NewTvShows}}
 					{{ if eq $i 0 }}<tr>{{ else if mod $i 2 }}</tr><tr>{{ else }}<td width="2%" align="center" valign="top">&nbsp;</td>{{ end }}
-					<td width="32%" align="left" valign="top">
+					<td width="49%" align="left" valign="top">
     			        <div class="title"><a href="{{ $val.Link }}">{{ $val.Title }}</a></div>
 						<div class="left-part">
 							<img alt="{{ $val.Title }} Poster" title="{{ $val.Title }} Poster" src="{{ $val.Image }}">
