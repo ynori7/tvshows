@@ -1,7 +1,9 @@
 package config
 
 import (
-	"gopkg.in/yaml.v2"
+	"strings"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -41,7 +43,7 @@ func (c *Config) IsInterestingMainGenre(genres []string) bool {
 
 func isContainedInList(str string, list []string) bool {
 	for _, s := range list {
-		if str == s {
+		if strings.TrimSpace(str) == s {
 			return true
 		}
 	}

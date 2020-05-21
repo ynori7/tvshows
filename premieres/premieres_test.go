@@ -32,7 +32,7 @@ func Test_GetPotentiallyInterestingPremieres(t *testing.T) {
 		},
 		"last date is in future": {
 			date: "April 22",
-			expectedLen: 301, //it'll process them all
+			expectedLen: 303, //it'll process them all
 		},
 		"last date is same as most recent": {
 			date: "April 20",
