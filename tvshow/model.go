@@ -1,6 +1,9 @@
 package tvshow
 
-import "github.com/ynori7/tvshows/streamer"
+import (
+	"encoding/json"
+	"github.com/ynori7/tvshows/streamer"
+)
 
 type TvShow struct {
 	Title           string `json:"name"`
@@ -19,8 +22,8 @@ type TvShow struct {
 }
 
 type Rating struct {
-	AverageRating string `json:"ratingValue"`
-	RatingCount   int    `json:"ratingCount"`
+	AverageRating json.Number `json:"ratingValue"`
+	RatingCount   int         `json:"ratingCount"`
 }
 
 type SearchResult struct {

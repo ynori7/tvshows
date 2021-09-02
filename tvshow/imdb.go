@@ -86,7 +86,7 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	}
 
 	tvShow.Link = link
-	tvShow.Score = c.calculateScore(tvShow.Rating.AverageRating, tvShow.Rating.RatingCount)
+	tvShow.Score = c.calculateScore(tvShow.Rating.AverageRating.String(), tvShow.Rating.RatingCount)
 
 	return tvShow, nil
 }
@@ -129,7 +129,7 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 
 		linkRaw := res.Find("a")
 		if link, ok := linkRaw.Attr("href"); ok {
-			searchResult.Link = baseUrl + link
+			searchResult.Link = c.buildLink(link)
 			potentialResults = append(potentialResults, *searchResult)
 		}
 	})
@@ -210,6 +210,24 @@ func (c ImdbClient) buildImdbSearchUrl(title string) string {
 	params := url.Values{}
 	params.Add("q", title)
 	return fmt.Sprintf("%s%s?%s", c.baseUrl, searchURI, params.Encode())
+}
+
+func (c ImdbClient) buildLink(uri string) string {
+	u, err := url.Parse(uri)
+	if err != nil {
+		if strings.HasPrefix(uri, "http") {
+			return uri
+		}
+	}
+
+	u.RawQuery = ""
+	uri = u.String()
+
+	if strings.HasPrefix(uri, "http") {
+		return uri
+	}
+
+	return baseUrl + uri
 }
 
 //list of rating counts. The index is the log() value

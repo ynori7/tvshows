@@ -29,9 +29,9 @@ func Test_GetTvShowData(t *testing.T) {
 	//then
 	require.NoError(t, err, "There was an error getting the link")
 	assert.Equal(t, server.URL, tvShow.Link)
-	assert.Equal(t, 5, len(tvShow.Genres))
+	assert.Equal(t, 3, len(tvShow.Genres))
 	assert.Equal(t, "Game of Thrones", tvShow.Title)
-	assert.Equal(t, 1663502, tvShow.Rating.RatingCount)
+	assert.Equal(t, 1865597, tvShow.Rating.RatingCount)
 }
 
 func Test_GetTvShowData_GenresNotList(t *testing.T) {
