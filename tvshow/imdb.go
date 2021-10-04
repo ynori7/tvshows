@@ -3,6 +3,7 @@ package tvshow
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
 	"math"
 	"net/http"
@@ -74,6 +75,10 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	if err := json.Unmarshal([]byte(x), tvShow); err != nil {
 		return nil, err
 	}
+
+	tvShow.Title = html.UnescapeString(tvShow.Title)
+	tvShow.Description = html.UnescapeString(tvShow.Description)
+
 	if tvShow.GenresRaw != nil {
 		genres, ok := tvShow.GenresRaw.([]interface{})
 		if ok {

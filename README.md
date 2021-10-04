@@ -35,7 +35,7 @@ Be sure to first copy `config.yaml.dist` to `config.yaml` and fill in the missin
 
 First, build the binary:
 ```
-go build cmd/premieres/main.go -o premieresemailer
+go build -o premieresemailer cmd/premieres/main.go
 ```
 
 Then set up the cronjob:
