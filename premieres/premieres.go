@@ -61,9 +61,9 @@ func (pc PremieresClient) GetPotentiallyInterestingPremieres(lastProcessedDate s
 			dateRaw := s.Find("th").Text()
 			dateParts := strings.Split(dateRaw, " / ")
 			if newestDate == "" {
-				newestDate = dateParts[1]
+				newestDate = strings.TrimSpace(dateParts[1])
 			}
-			if strings.ToLower(dateParts[1]) == strings.ToLower(lastProcessedDate) {
+			if strings.ToLower(strings.TrimSpace(dateParts[1])) == strings.ToLower(lastProcessedDate) {
 				done = true
 				return
 			}
