@@ -262,3 +262,4 @@ func (c ImdbClient) calculateScore(averageRating string, ratingCount int) int {
 	}
 	return score
 }
+
