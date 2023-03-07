@@ -45,7 +45,7 @@ func NewImdbClient(conf config.Config) ImdbClient {
 	}
 }
 
-//GetTvShowData looks up the tv show details
+// GetTvShowData looks up the tv show details
 func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	// Request the HTML page.
 	req, err := http.NewRequest("GET", link, nil)
@@ -53,6 +53,8 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept-Language", "en-US")
+	req.Header.Set("Referer", "https://www.imdb.com")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -96,7 +98,7 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	return tvShow, nil
 }
 
-//SearchForTvSeriesTitle returns the IMDB url for the title
+// SearchForTvSeriesTitle returns the IMDB url for the title
 func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 	// Request the HTML page.
 	req, err := http.NewRequest("GET", c.buildImdbSearchUrl(searchTitle), nil)
@@ -104,6 +106,8 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 		return "", err
 	}
 	req.Header.Set("Accept-Language", "en-US")
+	req.Header.Set("Referer", "https://www.imdb.com")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", err
@@ -122,18 +126,20 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 	potentialResults := make([]SearchResult, 0)
 
 	// Find the new releases
-	doc.Find("table.findList tr").Each(func(i int, s *goquery.Selection) {
-		res := s.Find(".result_text")
-		resText := res.Text()
-		textParts := strings.Split(resText, "(")
+	doc.Find(".ipc-metadata-list li").Each(func(i int, s *goquery.Selection) {
+		resLink := s.Find(".ipc-metadata-list-summary-item__t")
+		resText := resLink.Text()
 
-		searchResult := c.parseSearchResultTitle(textParts, searchTitle)
+		metadata := s.Find(".ipc-metadata-list-summary-item__tc li")
+		year := metadata.First()
+		titleType := year.Next()
+
+		searchResult := c.parseSearchResultTitle(resText, year.Text(), titleType.Text(), searchTitle)
 		if searchResult == nil {
 			return
 		}
 
-		linkRaw := res.Find("a")
-		if link, ok := linkRaw.Attr("href"); ok {
+		if link, ok := resLink.Attr("href"); ok {
 			searchResult.Link = c.buildLink(link)
 			potentialResults = append(potentialResults, *searchResult)
 		}
@@ -156,49 +162,35 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 	return potentialResults[bestResult].Link, nil
 }
 
-func (c ImdbClient) parseSearchResultTitle(textParts []string, searchTitle string) *SearchResult {
-	if len(textParts) == 0 {
-		return nil
-	}
-
-	title := strings.TrimSpace(textParts[0])
+func (c ImdbClient) parseSearchResultTitle(title string, year string, titleType string, searchTitle string) *SearchResult {
+	title = strings.TrimSpace(title)
 	if c.fuzzifyTitle(title) != c.fuzzifyTitle(searchTitle) {
 		return nil
 	}
 
-	var (
-		rawType  string
-		rawYear  string
-		rawDedup string
-	)
-
-	//format is "title (year) (type)"
-	if len(textParts) == 3 {
-		rawType = textParts[2]
-		rawYear = textParts[1]
-	}
-
-	//format is "title (dedup) (year) (type)"
-	if len(textParts) == 4 {
-		rawType = textParts[3]
-		rawYear = textParts[2]
-		rawDedup = textParts[1]
-	}
-
-	resType := strings.Trim(rawType, ") ")
+	resType := strings.Trim(titleType, ") ")
 	if !strings.HasPrefix(resType, "TV Series") && !strings.HasPrefix(resType, "TV Mini-Series") {
 		return nil
 	}
 
+	yearParts := strings.Split(year, "–")
+	if len(yearParts) == 2 {
+		if strings.TrimSpace(yearParts[1]) == "" {
+			year = yearParts[0]
+		} else {
+			year = yearParts[1]
+		}
+	}
+
 	return &SearchResult{
 		Title:       title,
-		Year:        strings.Trim(rawYear, ") "),
+		Year:        year,
 		Type:        resType,
-		DedupNumber: strings.Trim(rawDedup, ") "),
+		DedupNumber: "",
 	}
 }
 
-//fuzzifyTitle normalizes the text by removing punctuation and accents to make the titles comparable
+// fuzzifyTitle normalizes the text by removing punctuation and accents to make the titles comparable
 func (c ImdbClient) fuzzifyTitle(t string) string {
 	//replace accented characters
 	tr := transform.Chain(norm.NFD, transform.RemoveFunc(func(r rune) bool {
@@ -235,12 +227,12 @@ func (c ImdbClient) buildLink(uri string) string {
 	return baseUrl + uri
 }
 
-//list of rating counts. The index is the log() value
+// list of rating counts. The index is the log() value
 var scoreIntervals = []int{
 	0, 0, 500, 1000, 1500, 2000, 3000, 4000, 8000, 10000, 20000, 50000, 100000, 500000,
 }
 
-//calculateScore returns a score out of 100 based on the imdb rating, weight by the number of ratings
+// calculateScore returns a score out of 100 based on the imdb rating, weight by the number of ratings
 func (c ImdbClient) calculateScore(averageRating string, ratingCount int) int {
 	rating, err := strconv.ParseFloat(averageRating, 64)
 	if err != nil {
@@ -262,4 +254,3 @@ func (c ImdbClient) calculateScore(averageRating string, ratingCount int) int {
 	}
 	return score
 }
-
