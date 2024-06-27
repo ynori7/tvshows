@@ -27,20 +27,20 @@ func Test_GetPotentiallyInterestingPremieres(t *testing.T) {
 		expectedLen int
 	} {
 		"a week ago": {
-			date:"April 14",
+			date:"June 14",
 			expectedLen: 12,
 		},
 		"last date is in future": {
-			date: "April 22",
-			expectedLen: 303, //it'll process them all
+			date: "June 28",
+			expectedLen: 109, //it'll process them all
 		},
 		"last date is same as most recent": {
-			date: "April 20",
+			date: "June 25",
 			expectedLen: 0,
 		},
 		"beginning of the month": {
-			date: "April 1",
-			expectedLen: 42,
+			date: "June 1",
+			expectedLen: 32,
 		},
 	}
 
@@ -52,6 +52,9 @@ func Test_GetPotentiallyInterestingPremieres(t *testing.T) {
 		require.NoError(t, err, "There was an error getting the premieres", testcase)
 		assert.Equal(t, testdata.expectedLen, len(premieres.Premieres), testcase)
 		assert.Equal(t, testdata.date, premieres.StartDate, testcase)
-		assert.Equal(t, "April 20", premieres.EndDate, testcase)
+		assert.Equal(t, "June 25", premieres.EndDate, testcase)
 	}
 }
+
+//Time bandits wrong genres
+//Wandavision? what?

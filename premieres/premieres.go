@@ -2,16 +2,17 @@ package premieres
 
 import (
 	"fmt"
-	"github.com/ynori7/tvshows/streamer"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/ynori7/tvshows/streamer"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/ynori7/tvshows/config"
 )
 
-const premieresUrl = "https://www.metacritic.com/feature/tv-premiere-dates?page=1"
+const premieresUrl = "https://www.metacritic.com/news/tv-calendar-archive-of-past-dates/"
 const oneWeek = 7
 
 type PremieresClient struct {
@@ -52,74 +53,89 @@ func (pc PremieresClient) GetPotentiallyInterestingPremieres(lastProcessedDate s
 	// Find the new releases
 	done := false
 	newestDate := ""
-	doc.Find(".listtable tr").Each(func(i int, s *goquery.Selection) {
+
+	//Look for each new date
+	doc.Find(".c-CmsContent h3").Each(func(i int, s *goquery.Selection) {
 		if done {
 			return //stop after we've scanned the last week
 		}
 
-		if s.HasClass("sublistbig") { //This is the date headline. Check if this date was within the last week
-			dateRaw := s.Find("th").Text()
-			dateParts := strings.Split(dateRaw, " / ")
-			if newestDate == "" {
-				newestDate = strings.TrimSpace(dateParts[1])
+		dateRaw := s.Text()
+		dateParts := strings.Split(dateRaw, " / ")
+		if newestDate == "" {
+			newestDate = strings.TrimSpace(dateParts[1])
+		}
+		if strings.ToLower(strings.TrimSpace(dateParts[1])) == strings.ToLower(lastProcessedDate) {
+			done = true
+			return
+		}
+
+		//Find the list of premieres for this date
+		s.Next().Find("tr").Each(func(i int, s *goquery.Selection) {
+			premiere := new(Premiere)
+
+			//Check if it's a movie
+			titleLink := s.Find("td:nth-child(2) a").First()
+			if link, ok := titleLink.Attr("href"); ok && strings.Contains(link, "movie") {
+				return //we're not interested in movies
 			}
-			if strings.ToLower(strings.TrimSpace(dateParts[1])) == strings.ToLower(lastProcessedDate) {
-				done = true
-				return
+			movieFlag := s.Find("td:nth-child(2) img[alt=movie]")
+			if movieFlag != nil && movieFlag.Nodes != nil {
+				return //this is a movie
 			}
-		}
 
-		if !s.HasClass("even") {
-			return //this is probably a movie (vod=video-on-demand) or just a text note
-		}
+			//Get the title text
+			titleRaw := s.Find("td:nth-child(2) strong").First().Text()
+			if titleRaw == "" || titleRaw == "($)" { //sometimes it's a link and sometimes it's a strong
+				titleRaw = s.Find("td:nth-child(2) a").First().Text()
+			}
+			premiere.Title = pc.cleanTitle(titleRaw)
+			if premiere.Title == "" {
+				return //if there was no title then this is a garbage entry
+			}
+			if _, ok := premiereSet[premiere.Title]; ok {
+				return //this is apparently a duplicate
+			}
 
-		premiere := new(Premiere)
+			//Check if it's a new series
+			newImg := s.Find("td:nth-child(2) img[alt=\"new series\"]")
+			if newImg != nil && newImg.Nodes != nil {
+				premiere.IsNew = true
+			}
+			newImg = s.Find("td:nth-child(2) img[alt=\"limited series\"]")
+			if newImg != nil && newImg.Nodes != nil {
+				premiere.IsNew = true
+			}
 
-		//Check if it's a movie
-		titleLink := s.Find("td.title a").First()
-		if link, ok := titleLink.Attr("href"); ok && strings.Contains(link, "movie") {
-			return //we're not interested in movies
-		}
-		movieFlag := s.Find("td.title img[alt=MOVIE]")
-		if movieFlag != nil && movieFlag.Nodes != nil {
-			return //this is a movie
-		}
+			//Get genres
+			genresRaw, _ :=  s.Find("td:nth-child(2)").Html()
+			parts := strings.Split(genresRaw, "<br/>")
+			if len(parts) == 2 { 
+				genresRaw = parts[1] //the genres are in the second part
+				parts := strings.Split(genresRaw, ":")
+				if len(parts) == 2 {
+					genresRaw = parts[0]
+				}
+				genresRaw = strings.TrimSpace(genresRaw)
+			}
+			genreList := strings.Split(genresRaw, "/")
+			if !pc.conf.IsInterestingMainGenre(genreList) {
+				return //Not an interesting genre
+			}
+			premiere.Genres = genreList
 
-		//Get the title text
-		titleRaw := s.Find("td.title").Text()
-		premiere.Title = pc.cleanTitle(titleRaw)
-		if premiere.Title == ""  {
-			return //if there was no title then this is a garbage entry
-		}
-		if _, ok := premiereSet[premiere.Title]; ok {
-			return //this is apparently a duplicate
-		}
+			//Get streamer
+			networkRaw := s.Find("td:nth-child(3)")
+			premiere.StreamingOption = pc.getStreamer(networkRaw)
 
-		//Check if it's a new series
-		newImg := s.Find("td.title img[alt=NEW]")
-		if newImg != nil && newImg.Nodes != nil {
-			premiere.IsNew = true
-		}
-
-		//Get genres
-		genresRaw := s.Children().Eq(2).Text()
-		genreList := strings.Split(genresRaw, "/")
-		if !pc.conf.IsInterestingMainGenre(genreList) {
-			return //Not an interesting genre
-		}
-		premiere.Genres = genreList
-
-		//Get streamer
-		networkRaw := s.Children().Eq(3)
-		premiere.StreamingOption = pc.getStreamer(networkRaw)
-
-		premiereSet[premiere.Title] = premiere
+			premiereSet[premiere.Title] = premiere
+		})
 	})
 
 	//turn the map into a list
 	premieres := &PremiereList{
 		StartDate: lastProcessedDate,
-		EndDate: newestDate,
+		EndDate:   newestDate,
 	}
 	for _, r := range premiereSet {
 		premieres.Premieres = append(premieres.Premieres, *r)
@@ -138,16 +154,15 @@ func (pc PremieresClient) cleanTitle(t string) string {
 }
 
 func (pc PremieresClient) getStreamer(s *goquery.Selection) streamer.Streamer {
-	netflix := s.Find("img[alt=Netflix]")
-	if netflix != nil && netflix.Nodes != nil {
+	rawText := s.Text()
+	if strings.Contains(rawText, "Netflix") {
 		return streamer.Netflix
-	} else {
-		switch s.Text() {
-		case "Prime Video":
-			return streamer.Amazon
-		case "Disney+":
-			return streamer.Disney
-		}
+	}
+	if strings.Contains(rawText, "Prime Video") {
+		return streamer.Amazon
+	}
+	if strings.Contains(rawText, "Disney+") {
+		return streamer.Disney
 	}
 	return streamer.None
 }
