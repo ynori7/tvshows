@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ynori7/tvshows/config"
+	hulkhttp "github.com/ynori7/hulksmash/http"
 )
 
 func Test_GetTvShowData(t *testing.T) {
@@ -21,7 +22,7 @@ func Test_GetTvShowData(t *testing.T) {
 	defer server.Close()
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
-	imdbClient := ImdbClient{httpClient: server.Client(), conf: conf, baseUrl: server.URL}
+	imdbClient := ImdbClient{httpClient: hulkhttp.NewClientV2ForTests(server.Client().Transport), conf: conf, baseUrl: server.URL}
 
 	//when
 	tvShow, err := imdbClient.GetTvShowData(server.URL)
@@ -44,7 +45,7 @@ func Test_GetTvShowData_GenresNotList(t *testing.T) {
 	defer server.Close()
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
-	imdbClient := ImdbClient{httpClient: server.Client(), conf: conf, baseUrl: server.URL}
+	imdbClient := ImdbClient{httpClient: hulkhttp.NewClientV2ForTests(server.Client().Transport), conf: conf, baseUrl: server.URL}
 
 	//when
 	tvShow, err := imdbClient.GetTvShowData(server.URL)

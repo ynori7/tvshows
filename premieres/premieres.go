@@ -55,7 +55,7 @@ func (pc PremieresClient) GetPotentiallyInterestingPremieres(lastProcessedDate s
 	newestDate := ""
 
 	//Look for each new date
-	doc.Find(".c-CmsContent h3").Each(func(i int, s *goquery.Selection) {
+	doc.Find("h3.cms-h3").Each(func(i int, s *goquery.Selection) {
 		if done {
 			return //stop after we've scanned the last week
 		}
@@ -108,9 +108,10 @@ func (pc PremieresClient) GetPotentiallyInterestingPremieres(lastProcessedDate s
 			}
 
 			//Get genres
-			genresRaw, _ :=  s.Find("td:nth-child(2)").Html()
-			parts := strings.Split(genresRaw, "<br/>")
-			if len(parts) == 2 { 
+			genresRaw, _ := s.Find("td:nth-child(2)").Html()
+			genresRaw = strings.ReplaceAll(genresRaw, "<br/>", "<br>")
+			parts := strings.Split(genresRaw, "<br>")
+			if len(parts) == 2 {
 				genresRaw = parts[1] //the genres are in the second part
 				parts := strings.Split(genresRaw, ":")
 				if len(parts) == 2 {

@@ -1,13 +1,14 @@
 package premieres
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/ynori7/tvshows/config"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/ynori7/tvshows/config"
 )
 
 func Test_GetPotentiallyInterestingPremieres(t *testing.T) {
@@ -27,20 +28,20 @@ func Test_GetPotentiallyInterestingPremieres(t *testing.T) {
 		expectedLen int
 	} {
 		"a week ago": {
-			date:"June 14",
-			expectedLen: 12,
+			date:"June 4",
+			expectedLen: 10,
 		},
 		"last date is in future": {
 			date: "June 28",
-			expectedLen: 109, //it'll process them all
+			expectedLen: 90, //it'll process them all
 		},
 		"last date is same as most recent": {
-			date: "June 25",
+			date: "June 11",
 			expectedLen: 0,
 		},
 		"beginning of the month": {
 			date: "June 1",
-			expectedLen: 32,
+			expectedLen: 12,
 		},
 	}
 
@@ -52,7 +53,7 @@ func Test_GetPotentiallyInterestingPremieres(t *testing.T) {
 		require.NoError(t, err, "There was an error getting the premieres", testcase)
 		assert.Equal(t, testdata.expectedLen, len(premieres.Premieres), testcase)
 		assert.Equal(t, testdata.date, premieres.StartDate, testcase)
-		assert.Equal(t, "June 25", premieres.EndDate, testcase)
+		assert.Equal(t, "June 11", premieres.EndDate, testcase)
 	}
 }
 

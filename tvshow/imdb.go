@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"log"
 	"math"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -14,6 +16,8 @@ import (
 	"unicode"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/ynori7/hulksmash/anonymizer"
+	hulkhttp "github.com/ynori7/hulksmash/http"
 	"github.com/ynori7/tvshows/config"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
@@ -25,10 +29,11 @@ const (
 )
 
 type ImdbClient struct {
-	httpClient *http.Client
-	conf       config.Config
-	baseUrl    string
-	titleRegex *regexp.Regexp
+	httpClient    *hulkhttp.ClientV2
+	reqAnonymizer anonymizer.Anonymizer
+	conf          config.Config
+	baseUrl       string
+	titleRegex    *regexp.Regexp
 }
 
 func NewImdbClient(conf config.Config) ImdbClient {
@@ -38,10 +43,11 @@ func NewImdbClient(conf config.Config) ImdbClient {
 	}
 
 	return ImdbClient{
-		httpClient: &http.Client{},
-		conf:       conf,
-		baseUrl:    baseUrl,
-		titleRegex: reg,
+		httpClient:    hulkhttp.NewClientV2(),
+		reqAnonymizer: anonymizer.New(int64(rand.Int())),
+		conf:          conf,
+		baseUrl:       baseUrl,
+		titleRegex:    reg,
 	}
 }
 
@@ -60,7 +66,7 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
-	if res.StatusCode != 200 {
+	if res.StatusCode != 200 && res.StatusCode != 202 {
 		return nil, fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
 	}
 
@@ -113,9 +119,13 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 		return "", err
 	}
 	defer res.Body.Close()
-	if res.StatusCode != 200 {
+	if res.StatusCode != 200 && res.StatusCode != 202 {
 		return "", fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
 	}
+
+	fmt.Println(c.buildImdbSearchUrl(searchTitle))
+	respbody, _ := io.ReadAll(res.Body)
+	fmt.Println(string(respbody))
 
 	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -127,12 +137,12 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 
 	// Find the new releases
 	doc.Find(".ipc-metadata-list li").Each(func(i int, s *goquery.Selection) {
-		resLink := s.Find(".ipc-metadata-list-summary-item__t")
-		resText := resLink.Text()
+		resLink := s.Find(".ipc-title-link-wrapper")
+		resText := s.Find(".ipc-title__text").Text()
 
-		metadata := s.Find(".ipc-metadata-list-summary-item__tc li")
+		metadata := s.Find(".cli-title-metadata li")
 		year := metadata.First()
-		titleType := year.Next()
+		titleType := metadata.Last()
 
 		searchResult := c.parseSearchResultTitle(resText, year.Text(), titleType.Text(), searchTitle)
 		if searchResult == nil {
@@ -169,7 +179,7 @@ func (c ImdbClient) parseSearchResultTitle(title string, year string, titleType 
 	}
 
 	resType := strings.Trim(titleType, ") ")
-	if !strings.HasPrefix(resType, "TV Series") && !strings.HasPrefix(resType, "TV Mini-Series") {
+	if !strings.HasPrefix(resType, "TV Series") && !strings.HasPrefix(resType, "TV Mini") {
 		return nil
 	}
 
@@ -206,6 +216,7 @@ func (c ImdbClient) fuzzifyTitle(t string) string {
 func (c ImdbClient) buildImdbSearchUrl(title string) string {
 	params := url.Values{}
 	params.Add("q", title)
+	params.Add("exact", "true")
 	return fmt.Sprintf("%s%s?%s", c.baseUrl, searchURI, params.Encode())
 }
 

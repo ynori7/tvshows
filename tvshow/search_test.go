@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ynori7/tvshows/config"
+	hulkhttp "github.com/ynori7/hulksmash/http"
 )
 
 func Test_Search(t *testing.T) {
@@ -22,7 +23,7 @@ func Test_Search(t *testing.T) {
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
 	imdbClient := NewImdbClient(conf)
-	imdbClient.httpClient = server.Client()
+	imdbClient.httpClient = hulkhttp.NewClientV2ForTests(server.Client().Transport)
 	imdbClient.baseUrl = server.URL
 
 	//when
@@ -44,7 +45,7 @@ func Test_Search_TitleNotExactMatch(t *testing.T) {
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
 	imdbClient := NewImdbClient(conf)
-	imdbClient.httpClient = server.Client()
+	imdbClient.httpClient = hulkhttp.NewClientV2ForTests(server.Client().Transport)
 	imdbClient.baseUrl = server.URL
 
 	//when
@@ -66,7 +67,7 @@ func Test_Search_TitleHasAccent(t *testing.T) {
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
 	imdbClient := NewImdbClient(conf)
-	imdbClient.httpClient = server.Client()
+	imdbClient.httpClient = hulkhttp.NewClientV2ForTests(server.Client().Transport)
 	imdbClient.baseUrl = server.URL
 
 	//when
@@ -88,7 +89,7 @@ func Test_Search_TitleNonUnique(t *testing.T) {
 
 	conf := config.Config{MainGenres: []string{"Drama", "Comedy"}}
 	imdbClient := NewImdbClient(conf)
-	imdbClient.httpClient = server.Client()
+	imdbClient.httpClient = hulkhttp.NewClientV2ForTests(server.Client().Transport)
 	imdbClient.baseUrl = server.URL
 
 	//when
@@ -96,7 +97,7 @@ func Test_Search_TitleNonUnique(t *testing.T) {
 
 	//then
 	require.NoError(t, err, "There was an error getting the link")
-	assert.Equal(t, "https://www.imdb.com/title/tt21632986/", link)
+	assert.Equal(t, "https://www.imdb.com/title/tt16970638/", link)
 }
 
 func Test_fuzzifyTitle(t *testing.T) {
