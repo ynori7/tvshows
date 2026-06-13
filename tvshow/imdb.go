@@ -33,6 +33,7 @@ type ImdbClient struct {
 	conf          config.Config
 	baseUrl       string
 	titleRegex    *regexp.Regexp
+	wafCookie     string
 }
 
 func NewImdbClient(conf config.Config) ImdbClient {
@@ -41,13 +42,43 @@ func NewImdbClient(conf config.Config) ImdbClient {
 		log.Fatal(err)
 	}
 
-	return ImdbClient{
+	client := ImdbClient{
 		httpClient:    hulkhttp.NewClientV2(),
 		reqAnonymizer: anonymizer.New(int64(rand.Int())),
 		conf:          conf,
 		baseUrl:       baseUrl,
 		titleRegex:    reg,
 	}
+
+	if wafCookie, err := fetchWafCookie(); err != nil {
+		log.Printf("warning: failed to fetch WAF cookie: %v", err)
+	} else {
+		client.wafCookie = wafCookie
+	}
+
+	return client
+}
+
+func fetchWafCookie() (string, error) {
+	req, err := http.NewRequest("GET", baseUrl, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Accept-Language", "en-US")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+
+	chromeClient := &hulkhttp.ChromeClient{}
+	cookies, err := chromeClient.GetCookies(req)
+	if err != nil {
+		return "", err
+	}
+
+	for _, cookie := range cookies {
+		if cookie.Name == "aws-waf-token" {
+			return cookie.Value, nil
+		}
+	}
+	return "", fmt.Errorf("aws-waf-token cookie not found")
 }
 
 // GetTvShowData looks up the tv show details
@@ -60,6 +91,9 @@ func (c ImdbClient) GetTvShowData(link string) (*TvShow, error) {
 	req.Header.Set("Accept-Language", "en-US")
 	req.Header.Set("Referer", "https://www.imdb.com")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+	if c.wafCookie != "" {
+		req.Header.Set("Cookie", "aws-waf-token="+c.wafCookie)
+	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -113,6 +147,9 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 	req.Header.Set("Accept-Language", "en-US")
 	req.Header.Set("Referer", "https://www.imdb.com")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+	if c.wafCookie != "" {
+		req.Header.Set("Cookie", "aws-waf-token="+c.wafCookie)
+	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", err
