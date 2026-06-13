@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"io"
 	"log"
 	"math"
 	"math/rand"
@@ -122,10 +121,6 @@ func (c ImdbClient) SearchForTvSeriesTitle(searchTitle string) (string, error) {
 	if res.StatusCode != 200 && res.StatusCode != 202 {
 		return "", fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
 	}
-
-	fmt.Println(c.buildImdbSearchUrl(searchTitle))
-	respbody, _ := io.ReadAll(res.Body)
-	fmt.Println(string(respbody))
 
 	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
